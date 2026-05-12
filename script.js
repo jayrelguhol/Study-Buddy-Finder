@@ -1685,7 +1685,6 @@ function renderAdminDashboard() {
     const studentUsers = getUsers().filter((user) => user.role !== 'admin');
     const schedules = getSchedules().sort((left, right) => new Date(left.time) - new Date(right.time));
     const chats = getChats();
-    const conversations = getAdminConversationSummary();
 
     document.getElementById('admin-user-count').textContent = String(studentUsers.length);
     document.getElementById('admin-subject-count').textContent = String(studentUsers.filter((user) => user.subjects?.length && user.availability).length);
@@ -1714,18 +1713,6 @@ function renderAdminDashboard() {
             <button type="button" class="danger-btn" data-delete-schedule="${schedule.id}">Delete</button>
         </article>
     `).join('') : '<div class="empty-state">No schedules yet.</div>';
-
-    const chatsList = document.getElementById('admin-chats-list');
-    chatsList.innerHTML = conversations.length ? conversations.map((conversation) => `
-        <article class="manager-item">
-            <div>
-                <h3>${escapeHtml(conversation.participants.join(' and '))}</h3>
-                <p>${conversation.count} messages</p>
-                <p>Last activity: ${escapeHtml(formatDateTime(conversation.lastTimestamp))}</p>
-            </div>
-            <button type="button" class="danger-btn" data-clear-chat="${conversation.matchId}">Clear Chat</button>
-        </article>
-    `).join('') : '<div class="empty-state">No conversations yet.</div>';
 
     document.querySelectorAll('[data-remove-user]').forEach((button) => {
         button.addEventListener('click', async () => {
@@ -1759,24 +1746,6 @@ function renderAdminDashboard() {
                 window.alert('Unable to delete that schedule right now.');
                 button.disabled = false;
                 button.textContent = 'Delete';
-            }
-        });
-    });
-
-    document.querySelectorAll('[data-clear-chat]').forEach((button) => {
-        button.addEventListener('click', async () => {
-            try {
-                if (button.disabled) return;
-                button.disabled = true;
-                button.textContent = 'Clearing...';
-                await refreshAllData();
-                await clearConversation(button.dataset.clearChat);
-                renderAdminDashboard();
-            } catch (error) {
-                console.error('Unable to clear conversation.', error);
-                window.alert('Unable to clear that conversation right now.');
-                button.disabled = false;
-                button.textContent = 'Clear Chat';
             }
         });
     });
@@ -1833,7 +1802,7 @@ async function initApp() {
             } catch (error) {
                 console.error('Unable to refresh admin dashboard.', error);
             }
-        }, 10000);
+        }, 3000);
     }
 }
 
