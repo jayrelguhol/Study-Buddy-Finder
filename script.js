@@ -1154,7 +1154,13 @@ function initMatchesPage(user) {
     const subjectNote = document.getElementById('match-subject-note');
     const params = new URLSearchParams(window.location.search);
     const activeMatchSubject = params.get('subject') || '';
-    renderedMatches = getMatchesForUser(user, activeMatchSubject);
+
+    function computeMatches() {
+        const activeUser = getCurrentUser() || user;
+        renderedMatches = getMatchesForUser(activeUser, activeMatchSubject);
+    }
+
+    computeMatches();
     if (subjectNote) {
         subjectNote.textContent = activeMatchSubject
             ? 'Showing exact subject matches first, then related subjects, then other active users.'
@@ -1222,6 +1228,15 @@ function initMatchesPage(user) {
     }
 
     renderFilteredMatches();
+
+    refreshAllData()
+        .then(() => {
+            computeMatches();
+            renderFilteredMatches();
+        })
+        .catch((error) => {
+            console.error('Unable to refresh matches.', error);
+        });
 }
 
 function initSchedulePage(user) {
