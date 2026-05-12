@@ -34,6 +34,8 @@ const USER_PAGES = ['dashboard', 'subjects', 'matches', 'schedule', 'profile', '
 let authMode = 'login';
 let chatPollId = null;
 let renderedMatches = [];
+let realtimeChannel = null;
+let realtimeRefreshInFlight = null;
 const supabase = window.supabaseClient || null;
 const USE_SUPABASE = Boolean(supabase);
 const state = {
@@ -521,6 +523,63 @@ function getSchedules() {
     return state.schedules || [];
 }
 
+function rerenderCurrentPage() {
+    const page = getCurrentPage();
+    const user = getCurrentUser();
+    const matchId = localStorage.getItem(STORAGE_KEYS.CURRENT_CHAT_MATCH);
+
+    if (page === 'auth') return;
+    if (!user && page !== 'admin') return;
+
+    if (page === 'dashboard' && user) initDashboardPage(user);
+    if (page === 'matches' && user) initMatchesPage(user);
+    if (page === 'chat' && user && matchId) {
+        const partner = getChatPartner(matchId, user);
+        const partnerEl = document.getElementById('chat-partner');
+        if (partner && partnerEl) {
+            partnerEl.textContent = partner.fullName;
+        }
+        renderChatMessages(matchId, user);
+    }
+    if (page === 'admin') renderAdminDashboard();
+}
+
+async function handleRealtimeRefresh() {
+    if (realtimeRefreshInFlight) {
+        return realtimeRefreshInFlight;
+    }
+
+    realtimeRefreshInFlight = (async () => {
+        try {
+            await refreshAllData();
+            rerenderCurrentPage();
+        } catch (error) {
+            console.error('Unable to apply realtime update.', error);
+        }
+    })();
+
+    try {
+        await realtimeRefreshInFlight;
+    } finally {
+        realtimeRefreshInFlight = null;
+    }
+}
+
+function subscribeToRealtime() {
+    if (!USE_SUPABASE || realtimeChannel) return;
+
+    realtimeChannel = supabase
+        .channel('studybuddy-realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, handleRealtimeRefresh)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'chats' }, handleRealtimeRefresh)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, handleRealtimeRefresh)
+        .subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+                handleRealtimeRefresh();
+            }
+        });
+}
+
 async function saveSchedules(schedules) {
     const normalizedSchedules = schedules.map(normalizeSchedule);
 
@@ -553,12 +612,14 @@ async function saveSchedules(schedules) {
 }
 
 function getMatchesForUser(user, preferredSubject = '') {
-    if (!user?.subjects?.length || user.role === 'admin') return [];
+    if (!user || user.role === 'admin') return [];
+    if (!preferredSubject && !user?.subjects?.length) return [];
 
     return getUsers()
         .filter((other) => other.username !== user.username && other.role !== 'admin' && Array.isArray(other.subjects) && other.subjects.length)
         .map((other) => {
-            const sharedSubjects = user.subjects.filter((subject) => (other.subjects || []).includes(subject));
+            const userSubjects = Array.isArray(user.subjects) ? user.subjects : [];
+            const sharedSubjects = userSubjects.filter((subject) => (other.subjects || []).includes(subject));
             const relatedPreferredSubjects = preferredSubject
                 ? (other.subjects || []).filter((subject) => getRelatedSubjects(preferredSubject).includes(subject))
                 : [];
@@ -1540,15 +1601,17 @@ function initChatPage(user) {
     });
 
     renderChatMessages(matchId, user);
-    if (chatPollId) clearInterval(chatPollId);
-    chatPollId = window.setInterval(async () => {
-        try {
-            await refreshAllData();
-            renderChatMessages(matchId, user);
-        } catch (error) {
-            console.error('Unable to refresh chat messages.', error);
-        }
-    }, 4000);
+    if (!USE_SUPABASE) {
+        if (chatPollId) clearInterval(chatPollId);
+        chatPollId = window.setInterval(async () => {
+            try {
+                await refreshAllData();
+                renderChatMessages(matchId, user);
+            } catch (error) {
+                console.error('Unable to refresh chat messages.', error);
+            }
+        }, 4000);
+    }
 }
 
 async function removeUser(username) {
@@ -1711,6 +1774,7 @@ async function initApp() {
         if (refreshedUser) {
             user = refreshedUser;
         }
+        subscribeToRealtime();
     } catch (error) {
         console.error('Unable to initialize Study Buddy Finder data.', error);
     }
