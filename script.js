@@ -613,15 +613,15 @@ async function saveSchedules(schedules) {
 
 function getMatchesForUser(user, preferredSubject = '') {
     if (!user || user.role === 'admin') return [];
-    if (!preferredSubject && !user?.subjects?.length) return [];
 
     return getUsers()
-        .filter((other) => other.username !== user.username && other.role !== 'admin' && Array.isArray(other.subjects) && other.subjects.length)
+        .filter((other) => other.username !== user.username && other.role !== 'admin')
         .map((other) => {
             const userSubjects = Array.isArray(user.subjects) ? user.subjects : [];
+            const otherSubjects = Array.isArray(other.subjects) ? other.subjects : [];
             const sharedSubjects = userSubjects.filter((subject) => (other.subjects || []).includes(subject));
             const relatedPreferredSubjects = preferredSubject
-                ? (other.subjects || []).filter((subject) => getRelatedSubjects(preferredSubject).includes(subject))
+                ? otherSubjects.filter((subject) => getRelatedSubjects(preferredSubject).includes(subject))
                 : [];
             const subjectTopicDetails = Object.fromEntries(sharedSubjects.map((subject) => {
                 const yourTopics = getSubjectTopics(user, subject).map((item) => item.split('::')[1]).filter(Boolean);
@@ -636,7 +636,7 @@ function getMatchesForUser(user, preferredSubject = '') {
                     hasAvailabilityOverlap
                 }];
             }));
-            const availableSubjects = [...(other.subjects || [])];
+            const availableSubjects = [...otherSubjects];
             const prioritizedSubjects = [
                 ...new Set([
                     ...(preferredSubject && availableSubjects.includes(preferredSubject) ? [preferredSubject] : []),
@@ -797,8 +797,7 @@ function initAuthPage() {
     }
 }
 
-function initCommonPage() {
-    const user = requireAuth();
+function initCommonPage(user) {
     if (!user) return null;
     if (!enforceRoleAccess(user, getCurrentPage())) return null;
     document.getElementById('logout-btn')?.addEventListener('click', logout);
@@ -1780,19 +1779,21 @@ async function initApp() {
         return;
     }
 
-    let user = initCommonPage();
-    if (!user) return;
-
     try {
         await refreshAllData();
-        const refreshedUser = getCurrentUser();
-        if (refreshedUser) {
-            user = refreshedUser;
-        }
         subscribeToRealtime();
     } catch (error) {
         console.error('Unable to initialize Study Buddy Finder data.', error);
     }
+
+    let user = getCurrentUser();
+    if (!user) {
+        window.location.href = 'index.html';
+        return;
+    }
+
+    user = initCommonPage(user);
+    if (!user) return;
 
     if (page === 'dashboard') initDashboardPage(user);
     if (page === 'subjects') initSubjectsPage(user);
