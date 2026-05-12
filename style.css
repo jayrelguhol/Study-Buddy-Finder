@@ -1059,7 +1059,7 @@ button:hover {
         background:
             radial-gradient(circle at top, rgba(96, 165, 250, 0.18) 0%, transparent 36%),
             linear-gradient(180deg, #eef4ff 0%, var(--bg) 34%, var(--bg) 100%);
-        padding-bottom: 96px;
+        padding-bottom: 32px;
     }
 
     .container {
@@ -1082,7 +1082,8 @@ button:hover {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
         grid-template-areas:
-            "brand actions";
+            "brand actions"
+            "nav nav";
         align-items: center;
         gap: 12px;
         padding: 14px 0 12px;
@@ -1113,6 +1114,7 @@ button:hover {
         margin-left: 0;
         gap: 8px;
         justify-content: flex-end;
+        align-self: start;
     }
 
     .header-action-btn {
@@ -1124,39 +1126,53 @@ button:hover {
     }
 
     .top-nav {
-        position: fixed;
-        left: 12px;
-        right: 12px;
-        bottom: 10px;
-        z-index: 50;
-        display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-area: nav;
+        position: static;
+        left: auto;
+        right: auto;
+        bottom: auto;
+        z-index: auto;
+        display: flex;
+        align-items: stretch;
+        overflow-x: auto;
+        scrollbar-width: none;
         gap: 8px;
-        padding: 10px;
-        border: 1px solid rgba(219, 227, 240, 0.95);
-        border-radius: 26px;
-        background: rgba(255, 255, 255, 0.94);
-        box-shadow: 0 20px 40px rgba(15, 23, 42, 0.14);
-        backdrop-filter: blur(18px);
+        padding: 4px 0 2px;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        backdrop-filter: none;
     }
 
-    [data-theme="dark"] .top-nav {
-        background: rgba(22, 32, 51, 0.94);
-        border-color: rgba(51, 65, 85, 0.95);
-        box-shadow: 0 20px 40px rgba(2, 8, 23, 0.42);
+    .top-nav::-webkit-scrollbar {
+        display: none;
     }
 
     .top-nav a,
     .top-nav button {
-        display: grid;
-        place-items: center;
-        min-height: 54px;
-        padding: 0.7rem 0.3rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        min-height: 46px;
+        min-width: max-content;
+        padding: 0.72rem 0.95rem;
         border-radius: 18px;
-        font-size: 0.74rem;
-        line-height: 1.15;
+        font-size: 0.82rem;
+        line-height: 1;
         text-align: center;
-        background: transparent;
+        white-space: nowrap;
+        background: rgba(255, 255, 255, 0.78);
+        border: 1px solid rgba(219, 227, 240, 0.95);
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+    }
+
+    [data-theme="dark"] .top-nav a,
+    [data-theme="dark"] .top-nav button {
+        background: rgba(22, 32, 51, 0.92);
+        border-color: rgba(51, 65, 85, 0.95);
+        box-shadow: 0 10px 22px rgba(2, 8, 23, 0.24);
     }
 
     .top-nav a.active {
@@ -1172,6 +1188,17 @@ button:hover {
     .profile-sidebar,
     .manager-grid {
         gap: 16px;
+    }
+
+    .subjects-hero-copy,
+    .profile-hero-copy {
+        gap: 10px;
+    }
+
+    .subjects-hero-copy .lead,
+    .profile-hero-copy .lead {
+        max-width: none;
+        font-size: 0.98rem;
     }
 
     main {
@@ -1297,6 +1324,18 @@ button:hover {
         position: static;
     }
 
+    .subjects-main,
+    .subjects-side-card,
+    .profile-section,
+    .profile-subjects-card {
+        gap: 14px;
+    }
+
+    .subjects-sidebar,
+    .profile-sidebar {
+        gap: 16px;
+    }
+
     .subjects-picker-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 10px;
@@ -1316,11 +1355,29 @@ button:hover {
         border-radius: 20px;
     }
 
+    .topics-panel {
+        gap: 14px;
+    }
+
     .topics-panel-header,
     .section-heading,
     .match-group-header {
         display: grid;
         gap: 10px;
+    }
+
+    .topic-card {
+        padding: 16px;
+        border-radius: 18px;
+    }
+
+    .topic-chip-list {
+        gap: 8px;
+    }
+
+    .topic-chip {
+        min-height: 42px;
+        padding: 0.68rem 0.9rem;
     }
 
     .topics-grid,
@@ -1343,6 +1400,33 @@ button:hover {
         background:
             radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 30%),
             var(--surface);
+    }
+
+    .match-group + .match-group {
+        margin-top: 14px;
+    }
+
+    .match-group-title {
+        font-size: 1.1rem;
+    }
+
+    .match-group-count {
+        font-size: 0.86rem;
+    }
+
+    .match-card p,
+    .match-topic-panel p,
+    .profile-section-note,
+    .subjects-action-note,
+    .subjects-note,
+    .topics-selection-note {
+        font-size: 0.94rem;
+    }
+
+    .match-topic-panel {
+        margin-top: 12px;
+        padding: 12px;
+        border-radius: 16px;
     }
 
     .action-row {
@@ -1388,6 +1472,7 @@ button:hover {
     .profile-photo-block {
         justify-items: center;
         text-align: center;
+        gap: 14px;
     }
 
     .profile-photo-actions {
@@ -1422,8 +1507,7 @@ button:hover {
     .message-form {
         grid-template-columns: 1fr;
         gap: 10px;
-        position: sticky;
-        bottom: 86px;
+        position: static;
         padding: 12px;
         border-radius: 20px;
         background: rgba(255, 255, 255, 0.92);
@@ -1452,7 +1536,8 @@ button:hover {
         grid-template-columns: minmax(0, 1fr);
         grid-template-areas:
             "brand"
-            "actions";
+            "actions"
+            "nav";
     }
 
     .header-actions {
@@ -1462,21 +1547,78 @@ button:hover {
     }
 
     .top-nav {
-        left: 8px;
-        right: 8px;
-        bottom: 8px;
         gap: 6px;
-        padding: 8px;
+        padding: 2px 0 0;
     }
 
     .top-nav a,
     .top-nav button {
-        min-height: 50px;
-        font-size: 0.68rem;
+        min-height: 44px;
+        font-size: 0.76rem;
         border-radius: 16px;
     }
 
     .card {
+        padding: 16px;
+    }
+
+    .subjects-layout,
+    .profile-layout {
+        gap: 14px;
+    }
+
+    .subjects-hero,
+    .profile-hero,
+    .match-group,
+    .match-subject-panel {
+        border-radius: 20px;
+    }
+
+    .subjects-main,
+    .subjects-side-card,
+    .profile-section,
+    .profile-subjects-card {
+        gap: 12px;
+    }
+
+    .profile-photo-shell {
+        width: 92px;
+        height: 92px;
+    }
+
+    .profile-photo-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .profile-photo-upload {
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .topics-panel {
+        padding: 14px;
+    }
+
+    .topic-card {
+        padding: 14px;
+    }
+
+    .topic-chip {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .match-group-header,
+    .topics-panel-header,
+    .section-heading {
+        gap: 8px;
+    }
+
+    .match-card,
+    .manager-item,
+    .empty-state {
         padding: 16px;
     }
 
