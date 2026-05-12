@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Buddy Finder</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body data-page="auth">
+    <header class="site-header">
+        <div class="container header-shell">
+            <a href="index.html" class="brand">
+                <span class="brand-mark" aria-hidden="true">
+                    <span class="brand-book"></span>
+                    <span class="brand-book brand-book-right"></span>
+                    <span class="brand-dot"></span>
+                </span>
+                <span>Study Buddy Finder</span>
+            </a>
+        </div>
+    </header>
+
+    <main class="container auth-layout">
+        <section class="hero-panel card">
+            <p class="eyebrow">Student collaboration</p>
+            <h1>Find classmates to study with, plan sessions, and stay organized.</h1>
+            <p class="lead">Create your profile, choose your subjects, and connect with study partners whose schedule overlaps with yours.</p>
+        </section>
+
+        <section class="card auth-card">
+            <h2 id="form-title">Login</h2>
+            <p id="auth-mode-note" class="topics-selection-note">Use your username and password to continue.</p>
+            <form id="auth-form" class="stack-form">
+                <div class="form-group auth-extra is-hidden">
+                    <label for="name">Full Name</label>
+                    <input type="text" id="name" autocomplete="name">
+                </div>
+                <div class="form-group auth-extra is-hidden">
+                    <label for="course">Course and Year</label>
+                    <input type="text" id="course" placeholder="Example: BSIT 2">
+                </div>
+                <div class="form-group auth-extra is-hidden">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" autocomplete="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" autocomplete="current-password" required>
+                </div>
+                <div class="auth-actions">
+                    <button type="submit" id="submit-btn">Login</button>
+                    <button type="button" id="toggle-form" class="secondary-btn">Create a new account</button>
+                </div>
+            </form>
+            <p id="error-msg" class="feedback" aria-live="polite"></p>
+        </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+    <script src="script.js"></script>
+    <script src="auth.js"></script>
+</body>
+</html>

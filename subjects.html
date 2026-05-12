@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subjects - Study Buddy Finder</title>
+    <script>
+        if (localStorage.getItem('studybuddy_darkMode') === 'true') {
+            document.documentElement.dataset.theme = 'dark';
+        }
+    </script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body data-page="subjects">
+    <header class="site-header">
+        <div class="container header-shell">
+            <a href="dashboard.html" class="brand">
+                <span class="brand-mark" aria-hidden="true">
+                    <span class="brand-book"></span>
+                    <span class="brand-book brand-book-right"></span>
+                    <span class="brand-dot"></span>
+                </span>
+                <span>Study Buddy Finder</span>
+            </a>
+            <nav id="global-nav" class="top-nav" aria-label="Primary navigation">
+                <a href="dashboard.html" data-nav="dashboard">Dashboard</a>
+                <a href="subjects.html" data-nav="subjects">Subjects</a>
+                <a href="matches.html" data-nav="matches">Matches</a>
+                <a href="schedule.html" data-nav="schedule">Schedule</a>
+                <a href="profile.html" data-nav="profile">Profile</a>
+            </nav>
+            <div class="header-actions" aria-label="Quick actions">
+                <button type="button" id="dark-toggle" class="icon-btn header-action-btn" aria-label="Toggle theme">Theme</button>
+                <button type="button" id="logout-btn" class="secondary-btn compact-btn header-action-btn">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container page-shell subjects-page">
+        <section class="card subjects-hero">
+            <div class="subjects-hero-copy">
+                <p class="eyebrow">Subjects and schedule</p>
+                <h1>Upload your subject for matching</h1>
+                <p class="lead">Choose a subject, pick topics, set your time window, and upload that study request here before matches are shown.</p>
+            </div>
+        </section>
+
+        <form id="subjects-form" class="subjects-layout">
+            <section class="card subjects-main">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">Choose a lane</p>
+                        <h2>Subjects</h2>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="subjects-select">Subjects</label>
+                    <select id="subjects-select" required onchange="window.renderStudyBuddySubjectTopics && window.renderStudyBuddySubjectTopics()">
+                        <option value="">Choose a subject</option>
+                        <option value="Math">Math</option>
+                        <option value="Science">Science</option>
+                        <option value="Programming">Programming</option>
+                        <option value="English">English</option>
+                        <option value="History">History</option>
+                        <option value="Physics">Physics</option>
+                        <option value="Chemistry">Chemistry</option>
+                        <option value="Biology">Biology</option>
+                    </select>
+                    <input type="hidden" id="selected-topic-key" value="">
+                    <small>Select the subject you want to upload for finding a study buddy.</small>
+                </div>
+                <section class="topics-panel subjects-topics-panel" aria-labelledby="topics-title">
+                    <div class="topics-panel-header">
+                        <div>
+                            <p class="eyebrow">Study together</p>
+                            <h2 id="topics-title">Suggested topics per subject</h2>
+                        </div>
+                        <small>Pick a subject above to see what you and your study buddy can focus on.</small>
+                    </div>
+                    <div id="topics-selection-note" class="topics-selection-note">
+                        Tap a topic to mark what you want to study together.
+                    </div>
+                    <div id="subject-topics" class="topics-empty-state">
+                        Select a subject to view suggested topics you can study together.
+                    </div>
+                </section>
+            </section>
+
+            <aside class="subjects-sidebar">
+                <section class="card subjects-side-card">
+                    <div class="section-heading">
+                        <div>
+                            <p class="eyebrow">Availability</p>
+                            <h2>Session Window</h2>
+                        </div>
+                    </div>
+                    <div class="subjects-schedule-grid">
+                        <div class="form-group">
+                            <label for="availability-start">Available From</label>
+                            <input type="datetime-local" id="availability-start" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="availability-end">Available Until</label>
+                            <input type="datetime-local" id="availability-end" required>
+                        </div>
+                    </div>
+                    <button type="submit">Upload Subject and Find Matches</button>
+                    <p class="subjects-action-note">Your chosen subject, topics, and availability will be uploaded from this page before matching.</p>
+                </section>
+
+                <section class="card subjects-side-card subjects-note-card">
+                    <p class="eyebrow">Matching note</p>
+                    <p class="subjects-note">A tighter subject and time window usually gives cleaner match results and more relevant study topics.</p>
+                </section>
+            </aside>
+        </form>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+    <script src="common.js"></script>
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const select = document.getElementById('subjects-select');
+            const topicsContainer = document.getElementById('subject-topics');
+            const selectedTopicInput = document.getElementById('selected-topic-key');
+
+            if (!select || !topicsContainer || !selectedTopicInput) return;
+
+            const TOPICS_BY_SUBJECT = {
+                Math: ['Algebra', 'Geometry', 'Trigonometry', 'Statistics', 'Word problems'],
+                Science: ['Scientific method', 'Earth science', 'Energy and matter', 'Lab analysis', 'Science reporting'],
+                Programming: ['Variables and data types', 'Loops and conditions', 'Functions', 'Debugging', 'Problem solving'],
+                English: ['Reading comprehension', 'Grammar', 'Essay writing', 'Vocabulary', 'Oral presentation'],
+                History: ['Historical timelines', 'Primary sources', 'Cause and effect', 'Civilizations', 'Document analysis'],
+                Physics: ['Motion and forces', 'Work and energy', 'Waves', 'Electricity', 'Problem solving drills'],
+                Chemistry: ['Periodic table', 'Chemical reactions', 'Stoichiometry', 'Acids and bases', 'Lab calculations'],
+                Biology: ['Cell structure', 'Genetics', 'Human body systems', 'Ecology', 'Classification']
+            };
+
+            function renderTopicsFallback() {
+                const subject = select.value;
+                let selectedKey = selectedTopicInput.value;
+                if (!subject || !TOPICS_BY_SUBJECT[subject]) {
+                    topicsContainer.className = 'topics-empty-state';
+                    topicsContainer.innerHTML = 'Select a subject to view suggested topics you can study together.';
+                    selectedTopicInput.value = '';
+                    return;
+                }
+
+                if (selectedKey && !selectedKey.startsWith(`${subject}::`)) {
+                    selectedKey = '';
+                    selectedTopicInput.value = '';
+                }
+
+                topicsContainer.className = 'topics-grid';
+                topicsContainer.innerHTML = `
+                    <article class="topic-card">
+                        <h3>${subject}</h3>
+                        <div class="topic-chip-list">
+                            ${TOPICS_BY_SUBJECT[subject].map((topic) => {
+                                const key = `${subject}::${topic}`;
+                                const isSelected = selectedKey === key;
+                                return `<button type="button" class="topic-chip ${isSelected ? 'is-selected' : ''}" data-fallback-topic-key="${key}" aria-pressed="${isSelected ? 'true' : 'false'}">${topic}</button>`;
+                            }).join('')}
+                        </div>
+                    </article>
+                `;
+            }
+
+            topicsContainer.addEventListener('click', function (event) {
+                const button = event.target.closest('[data-fallback-topic-key]');
+                if (!button) return;
+
+                const key = button.dataset.fallbackTopicKey || '';
+                selectedTopicInput.value = selectedTopicInput.value === key ? '' : key;
+                renderTopicsFallback();
+            });
+
+            select.addEventListener('change', renderTopicsFallback);
+            select.addEventListener('input', renderTopicsFallback);
+            renderTopicsFallback();
+        });
+    </script>
+</body>
+</html>

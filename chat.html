@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat - Study Buddy Finder</title>
+    <script>
+        if (localStorage.getItem('studybuddy_darkMode') === 'true') {
+            document.documentElement.dataset.theme = 'dark';
+        }
+    </script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body data-page="chat">
+    <header class="site-header">
+        <div class="container header-shell">
+            <a href="dashboard.html" class="brand">
+                <span class="brand-mark" aria-hidden="true">
+                    <span class="brand-book"></span>
+                    <span class="brand-book brand-book-right"></span>
+                    <span class="brand-dot"></span>
+                </span>
+                <span>Study Buddy Finder</span>
+            </a>
+            <nav id="global-nav" class="top-nav" aria-label="Primary navigation">
+                <a href="dashboard.html" data-nav="dashboard">Dashboard</a>
+                <a href="subjects.html" data-nav="subjects">Subjects</a>
+                <a href="matches.html" data-nav="matches">Matches</a>
+                <a href="schedule.html" data-nav="schedule">Schedule</a>
+                <a href="profile.html" data-nav="profile">Profile</a>
+            </nav>
+            <div class="header-actions" aria-label="Quick actions">
+                <button type="button" id="dark-toggle" class="icon-btn header-action-btn" aria-label="Toggle theme">Theme</button>
+                <button type="button" id="logout-btn" class="secondary-btn compact-btn header-action-btn">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container page-shell">
+        <section class="card chat-card">
+            <div id="chat-header" class="chat-header">
+                <div>
+                    <p class="eyebrow">Conversation</p>
+                    <h1>Chat with <span id="chat-partner"></span></h1>
+                </div>
+                <button type="button" id="back-to-matches" class="secondary-btn compact-btn">Back to Matches</button>
+            </div>
+            <div id="messages-container" class="messages"></div>
+            <form id="message-form" class="message-form">
+                <input type="text" id="message-input" placeholder="Type a message..." required>
+                <button type="submit">Send</button>
+            </form>
+        </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+    <script src="common.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
