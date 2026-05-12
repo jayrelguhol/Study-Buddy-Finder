@@ -9,6 +9,16 @@ const SUBJECT_TOPICS = {
     Chemistry: ['Periodic table', 'Chemical reactions', 'Stoichiometry', 'Acids and bases', 'Lab calculations'],
     Biology: ['Cell structure', 'Genetics', 'Human body systems', 'Ecology', 'Classification']
 };
+const RELATED_SUBJECTS = {
+    Math: ['Physics', 'Programming', 'Chemistry'],
+    Science: ['Biology', 'Chemistry', 'Physics'],
+    Programming: ['Math', 'Physics'],
+    English: ['History'],
+    History: ['English'],
+    Physics: ['Math', 'Science', 'Programming', 'Chemistry'],
+    Chemistry: ['Science', 'Biology', 'Physics', 'Math'],
+    Biology: ['Science', 'Chemistry']
+};
 const STORAGE_KEYS = {
     USERS: 'studybuddy_users',
     CURRENT_USER: 'studybuddy_currentUser',
@@ -468,6 +478,10 @@ function getMatchId(userA, userB) {
     return [userA, userB].sort().join('__');
 }
 
+function getRelatedSubjects(subject) {
+    return Array.isArray(RELATED_SUBJECTS[subject]) ? RELATED_SUBJECTS[subject] : [];
+}
+
 function getChats() {
     return state.chats || [];
 }
@@ -545,6 +559,9 @@ function getMatchesForUser(user, preferredSubject = '') {
         .filter((other) => other.username !== user.username && other.role !== 'admin' && Array.isArray(other.subjects) && other.subjects.length)
         .map((other) => {
             const sharedSubjects = user.subjects.filter((subject) => (other.subjects || []).includes(subject));
+            const relatedPreferredSubjects = preferredSubject
+                ? (other.subjects || []).filter((subject) => getRelatedSubjects(preferredSubject).includes(subject))
+                : [];
             const subjectTopicDetails = Object.fromEntries(sharedSubjects.map((subject) => {
                 const yourTopics = getSubjectTopics(user, subject).map((item) => item.split('::')[1]).filter(Boolean);
                 const partnerTopics = getSubjectTopics(other, subject).map((item) => item.split('::')[1]).filter(Boolean);
@@ -562,11 +579,15 @@ function getMatchesForUser(user, preferredSubject = '') {
             const prioritizedSubjects = [
                 ...new Set([
                     ...(preferredSubject && availableSubjects.includes(preferredSubject) ? [preferredSubject] : []),
+                    ...relatedPreferredSubjects,
                     ...sharedSubjects,
                     ...availableSubjects
                 ])
             ];
             const priorityScore = preferredSubject && availableSubjects.includes(preferredSubject) ? 100 : 0;
+            const relatedScore = preferredSubject && !availableSubjects.includes(preferredSubject) && relatedPreferredSubjects.length
+                ? 50 + (relatedPreferredSubjects.length * 5)
+                : 0;
             const sharedScore = sharedSubjects.length * 10;
             const overlapScore = sharedSubjects.filter((subject) => subjectTopicDetails[subject]?.hasAvailabilityOverlap).length * 2;
 
@@ -576,9 +597,11 @@ function getMatchesForUser(user, preferredSubject = '') {
                 commonSubjects: sharedSubjects,
                 availableSubjects,
                 prioritizedSubjects,
+                relatedPreferredSubjects,
                 subjectTopicDetails,
                 hasPreferredSubject: Boolean(preferredSubject && availableSubjects.includes(preferredSubject)),
-                score: priorityScore + sharedScore + overlapScore
+                hasRelatedPreferredSubject: Boolean(preferredSubject && !availableSubjects.includes(preferredSubject) && relatedPreferredSubjects.length),
+                score: priorityScore + relatedScore + sharedScore + overlapScore
             };
         })
         .sort((left, right) => {
@@ -1073,7 +1096,7 @@ function initMatchesPage(user) {
     renderedMatches = getMatchesForUser(user, activeMatchSubject);
     if (subjectNote) {
         subjectNote.textContent = activeMatchSubject
-            ? 'Showing all users who uploaded subjects, while prioritizing the subject you just selected first.'
+            ? 'Showing exact subject matches first, then related subjects, then other active users.'
             : 'Showing all users who uploaded subjects for study matching.';
     }
 
@@ -1090,19 +1113,33 @@ function initMatchesPage(user) {
         const prioritizedMatches = activeMatchSubject
             ? filteredMatches.filter((match) => match.hasPreferredSubject)
             : filteredMatches;
+        const relatedMatches = activeMatchSubject
+            ? filteredMatches.filter((match) => !match.hasPreferredSubject && match.hasRelatedPreferredSubject)
+            : [];
         const otherMatches = activeMatchSubject
-            ? filteredMatches.filter((match) => !match.hasPreferredSubject)
+            ? filteredMatches.filter((match) => !match.hasPreferredSubject && !match.hasRelatedPreferredSubject)
             : [];
 
         const sections = [
             activeMatchSubject ? `
                 <section class="match-group is-active-match-group">
                     <div class="match-group-header">
-                        <h2 class="match-group-title">Priority Matches</h2>
+                        <h2 class="match-group-title">Exact Subject Matches</h2>
                         <span class="match-group-count">${prioritizedMatches.length} user${prioritizedMatches.length === 1 ? '' : 's'}</span>
                     </div>
                     <div class="list-grid">
                         ${prioritizedMatches.length ? buildMatchCardsHtml(prioritizedMatches) : '<div class="empty-state">No users uploaded this subject yet.</div>'}
+                    </div>
+                </section>
+            ` : '',
+            activeMatchSubject ? `
+                <section class="match-group">
+                    <div class="match-group-header">
+                        <h2 class="match-group-title">Related Subject Matches</h2>
+                        <span class="match-group-count">${relatedMatches.length} user${relatedMatches.length === 1 ? '' : 's'}</span>
+                    </div>
+                    <div class="list-grid">
+                        ${relatedMatches.length ? buildMatchCardsHtml(relatedMatches) : '<div class="empty-state">No users uploaded related subjects yet.</div>'}
                     </div>
                 </section>
             ` : '',
