@@ -255,8 +255,60 @@ function getUsers() {
     return state.users.length ? state.users : getLocalSeededUsers();
 }
 
-async function saveUsers(users) {
+function replaceUserInState(nextUser) {
+    const normalizedUser = normalizeUser(nextUser);
+    const existingUsers = getUsers();
+    const nextUsers = existingUsers.some((user) => user.username === normalizedUser.username)
+        ? existingUsers.map((user) => user.username === normalizedUser.username ? normalizedUser : user)
+        : existingUsers.concat(normalizedUser);
+
+    state.users = nextUsers.map(normalizeUser);
+    persistCollectionsToCache();
+    return normalizedUser;
+}
+
+async function upsertUser(user) {
+    const normalizedUser = normalizeUser(user);
+
+    if (!USE_SUPABASE) {
+        return replaceUserInState(normalizedUser);
+    }
+
+    const { data, error } = await supabase
+        .from('users')
+        .upsert(toRemoteUser(normalizedUser), { onConflict: 'username' })
+        .select()
+        .single();
+
+    if (error) throw error;
+
+    return replaceUserInState(data || normalizedUser);
+}
+
+async function deleteUsersByUsername(usernames) {
+    const usernamesToRemove = [...new Set((usernames || []).map((username) => String(username || '').trim()).filter(Boolean))];
+    if (!usernamesToRemove.length) return;
+
+    if (!USE_SUPABASE) {
+        state.users = getUsers().filter((user) => !usernamesToRemove.includes(user.username));
+        persistCollectionsToCache();
+        return;
+    }
+
+    const { error } = await supabase
+        .from('users')
+        .delete()
+        .in('username', usernamesToRemove);
+
+    if (error) throw error;
+
+    state.users = getUsers().filter((user) => !usernamesToRemove.includes(user.username));
+    persistCollectionsToCache();
+}
+
+async function saveUsers(users, options = {}) {
     const normalizedUsers = users.map(normalizeUser);
+    const { replaceAll = false } = options;
 
     if (!USE_SUPABASE) {
         state.users = normalizedUsers;
@@ -264,16 +316,14 @@ async function saveUsers(users) {
         return;
     }
 
-    const previousUsernames = new Set((state.users || []).map((user) => user.username));
-    const nextUsernames = new Set(normalizedUsers.map((user) => user.username));
-    const removedUsernames = [...previousUsernames].filter((username) => !nextUsernames.has(username));
+    if (replaceAll) {
+        const previousUsernames = new Set((state.users || []).map((user) => user.username));
+        const nextUsernames = new Set(normalizedUsers.map((user) => user.username));
+        const removedUsernames = [...previousUsernames].filter((username) => !nextUsernames.has(username));
 
-    if (removedUsernames.length) {
-        const { error } = await supabase
-            .from('users')
-            .delete()
-            .in('username', removedUsernames);
-        if (error) throw error;
+        if (removedUsernames.length) {
+            await deleteUsersByUsername(removedUsernames);
+        }
     }
 
     const { error } = await supabase
@@ -615,7 +665,11 @@ function getMatchesForUser(user, preferredSubject = '') {
     if (!user || user.role === 'admin') return [];
 
     return getUsers()
-        .filter((other) => other.username !== user.username && other.role !== 'admin')
+        .filter((other) => {
+            if (other.username === user.username || other.role === 'admin') return false;
+            const otherSubjects = Array.isArray(other.subjects) ? other.subjects.filter(Boolean) : [];
+            return otherSubjects.length > 0;
+        })
         .map((other) => {
             const userSubjects = Array.isArray(user.subjects) ? user.subjects : [];
             const otherSubjects = Array.isArray(other.subjects) ? other.subjects : [];
@@ -1061,7 +1115,7 @@ function initSubjectsPage(user) {
             [selectedSubject]: getCurrentTopicKeys()
         };
 
-        users[index] = {
+        const updatedUser = {
             ...users[index],
             subjects: mergedSubjects,
             selectedTopics: flattenSubjectTopics(updatedSubjectTopics),
@@ -1070,7 +1124,7 @@ function initSubjectsPage(user) {
             availability: { start, end }
         };
         try {
-            await saveUsers(users);
+            await upsertUser(updatedUser);
         } catch (error) {
             console.error('Unable to save subjects.', error);
             window.alert('Unable to save your subject setup right now. Please try again.');
@@ -1078,6 +1132,7 @@ function initSubjectsPage(user) {
             setButtonBusy(subjectsSubmitBtn, false, '', subjectsSubmitBtn?.dataset.defaultLabel || 'Save Subject');
             return;
         }
+        localStorage.setItem(STORAGE_KEYS.CURRENT_MATCH_SUBJECT, selectedSubject);
         window.location.href = `matches.html?subject=${encodeURIComponent(selectedSubject)}`;
     });
 }
@@ -1161,7 +1216,7 @@ function bindMatchCardActions(container) {
 function initMatchesPage(user) {
     const subjectNote = document.getElementById('match-subject-note');
     const params = new URLSearchParams(window.location.search);
-    const activeMatchSubject = params.get('subject') || '';
+    const activeMatchSubject = params.get('subject') || localStorage.getItem(STORAGE_KEYS.CURRENT_MATCH_SUBJECT) || '';
 
     function computeMatches() {
         const activeUser = getCurrentUser() || user;
@@ -1519,9 +1574,8 @@ function initProfilePage(user) {
             const index = users.findIndex((item) => item.username === user.username);
             if (index === -1 || !result) return;
 
-            users[index] = { ...users[index], profilePhoto: result };
             try {
-                await saveUsers(users);
+                await upsertUser({ ...users[index], profilePhoto: result });
             } catch (error) {
                 console.error('Unable to save profile photo.', error);
                 window.alert('Unable to save your profile photo right now.');
@@ -1638,8 +1692,7 @@ function initChatPage(user) {
 }
 
 async function removeUser(username) {
-    const users = getUsers().filter((user) => user.username !== username);
-    await saveUsers(users);
+    await deleteUsersByUsername([username]);
 
     const schedules = getSchedules().filter((schedule) => schedule.user1 !== username && schedule.user2 !== username);
     await saveSchedules(schedules);
