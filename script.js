@@ -662,6 +662,9 @@ function getMatchesForUser(user, preferredSubject = '') {
                 subjectTopicDetails,
                 hasPreferredSubject: Boolean(preferredSubject && availableSubjects.includes(preferredSubject)),
                 hasRelatedPreferredSubject: Boolean(preferredSubject && !availableSubjects.includes(preferredSubject) && relatedPreferredSubjects.length),
+                preferredSubjectLabel: preferredSubject && availableSubjects.includes(preferredSubject)
+                    ? `${preferredSubject} was uploaded by this user.`
+                    : '',
                 score: priorityScore + relatedScore + sharedScore + overlapScore
             };
         })
@@ -1099,6 +1102,12 @@ function buildMatchCardsHtml(matches) {
         <article class="match-card">
             <h3>${escapeHtml(match.otherUser.fullName)}</h3>
             <p><strong>Course:</strong> ${escapeHtml(match.otherUser.course || 'Not set')}</p>
+            <p><strong>Uploaded subjects:</strong> ${match.availableSubjects.length ? escapeHtml(match.availableSubjects.join(', ')) : 'No uploaded subjects yet'}</p>
+            ${match.hasPreferredSubject
+                ? `<p><strong>Same subject match:</strong> ${escapeHtml(match.preferredSubjectLabel)}</p>`
+                : match.hasRelatedPreferredSubject
+                    ? `<p><strong>Related uploaded subject:</strong> ${escapeHtml((match.relatedPreferredSubjects || []).join(', '))}</p>`
+                    : ''}
             <p><strong>Shared subjects:</strong> ${match.commonSubjects.length ? escapeHtml(match.commonSubjects.join(', ')) : 'None yet'}</p>
             <p><strong>Available subjects to study:</strong> ${escapeHtml((match.prioritizedSubjects || match.availableSubjects || []).join(', '))}</p>
             ${match.commonSubjects.map((subject) => {
@@ -1773,6 +1782,19 @@ function renderAdminDashboard() {
     });
 }
 
+function initAdminPage() {
+    renderAdminDashboard();
+
+    refreshAllData()
+        .then(() => {
+            renderAdminDashboard();
+        })
+        .catch((error) => {
+            console.error('Unable to refresh admin dashboard.', error);
+            renderAdminDashboard();
+        });
+}
+
 async function initApp() {
     const page = getCurrentPage();
     if (page === 'auth') {
@@ -1801,12 +1823,9 @@ async function initApp() {
     if (page === 'schedule') initSchedulePage(user);
     if (page === 'profile') initProfilePage(user);
     if (page === 'chat') initChatPage(user);
-    if (page === 'admin') {
-        renderAdminDashboard();
-    }
+    if (page === 'admin') initAdminPage();
 
     if (page === 'admin') {
-        renderAdminDashboard();
         window.setInterval(async () => {
             try {
                 await refreshAllData();
